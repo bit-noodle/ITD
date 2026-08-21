@@ -1,0 +1,1920 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title id="pageTitle">ITD HISTORICAL MONITORING DASHBOARD & REPORT (GMT+8)</title>
+  <link id="dynamicFavicon" rel="icon" type="image/png" href="">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- SheetJS (Excel .xlsx Export) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- html2pdf.js (PDF Report Generation) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
+            darkcard: '#1e293b',
+            darkbg: '#0f172a',
+            bordercolor: '#334155'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { 
+      background-color: #0f172a; 
+      color: #f8fafc; 
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      -webkit-tap-highlight-color: transparent;
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+    }
+    .card { 
+      background-color: rgba(30, 41, 59, 0.85); 
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08); 
+      border-radius: 0.85rem; 
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    }
+    .modal-backdrop { background-color: rgba(15, 23, 42, 0.85); backdrop-filter: blur(6px); }
+    textarea.code-editor {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+      tab-size: 2;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    @media (max-width: 640px) {
+      input, select, textarea { font-size: 16px !important; }
+    }
+  </style>
+</head>
+<body id="appBody" class="min-h-screen pb-20 sm:pb-12 transition-colors duration-300">
+
+  <!-- Header with GMT+8 Clock & Responsive Nav -->
+  <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 sm:gap-3">
+      
+      <!-- Title & Custom Logo / Icon -->
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-3">
+          <div id="headerBrandContainer" class="p-2 bg-blue-600/20 border border-blue-500/30 rounded-xl text-white shadow flex items-center justify-center overflow-hidden w-10 h-10">
+            <i id="headerBrandIcon" class="fa-solid fa-truck-monster text-lg text-blue-400"></i>
+            <img id="headerBrandImage" src="" class="hidden w-full h-full object-contain" alt="Brand Logo">
+          </div>
+          <div>
+            <h1 class="text-sm sm:text-base font-bold text-slate-100 tracking-tight leading-tight">ITD HISTORICAL MONITORING DASHBOARD</h1>
+            <div class="flex items-center gap-2 text-[10px] sm:text-xs text-slate-400 mt-0.5">
+              <span class="flex items-center gap-1 text-emerald-400 font-mono font-medium">
+                <i class="fa-regular fa-clock text-[10px]"></i> <span id="clockGMT8">--:--:-- GMT+8</span>
+              </span>
+              <span>• PT. KAI-GAM</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions Mobile -->
+        <div class="flex items-center gap-1.5 sm:hidden">
+          <button onclick="exportToExcel()" title="Export Excel" class="p-2 bg-emerald-600 active:bg-emerald-700 text-white text-xs rounded-lg shadow">
+            <i class="fa-solid fa-file-excel"></i>
+          </button>
+          <button onclick="generatePDFReport()" title="PDF Report" class="p-2 bg-rose-600 active:bg-rose-700 text-white text-xs rounded-lg shadow">
+            <i class="fa-solid fa-file-pdf"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Action Buttons Desktop -->
+      <div class="hidden sm:flex items-center gap-2">
+        <button onclick="exportToExcel()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition flex items-center gap-2 shadow-sm border border-emerald-400/30">
+          <i class="fa-solid fa-file-excel"></i> Export Excel
+        </button>
+        <button onclick="generatePDFReport()" class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-lg transition flex items-center gap-2 shadow-sm border border-rose-400/30">
+          <i class="fa-solid fa-file-pdf"></i> Download PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <div class="border-t border-slate-800 bg-slate-950/80 px-3 py-1.5">
+      <nav class="max-w-7xl mx-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+        <button onclick="switchTab('analytics')" id="tab-analytics" class="px-3.5 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition bg-blue-600 text-white flex items-center gap-2 shadow-sm">
+          <i id="nav-icon-dashboard" class="fa-solid fa-chart-line"></i> Dashboard
+        </button>
+        <button onclick="switchTab('units')" id="tab-units" class="px-3.5 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition text-slate-400 hover:text-white flex items-center gap-2">
+          <i id="nav-icon-units" class="fa-solid fa-truck-field"></i> Units & Radio Specs
+        </button>
+        <button onclick="switchTab('services')" id="tab-services" class="px-3.5 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition text-slate-400 hover:text-white flex items-center gap-2">
+          <i id="nav-icon-services" class="fa-solid fa-wrench"></i> Service Logs
+        </button>
+        <button onclick="switchTab('stock')" id="tab-stock" class="px-3.5 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition text-slate-400 hover:text-white flex items-center gap-2">
+          <i id="nav-icon-stock" class="fa-solid fa-boxes-stacked"></i> Inventory
+        </button>
+        <button onclick="switchTab('console')" id="tab-console" class="px-3.5 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition text-slate-400 hover:text-white flex items-center gap-2">
+          <i id="nav-icon-console" class="fa-solid fa-terminal text-amber-400"></i> Console
+        </button>
+        <button onclick="switchTab('settings')" id="tab-settings" class="px-3.5 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition text-slate-400 hover:text-white flex items-center gap-2">
+          <i id="nav-icon-settings" class="fa-solid fa-sliders text-cyan-400"></i> Customization
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-3 sm:px-4 mt-4 sm:mt-6">
+
+    <!-- Unactioned Work & Low Stock Alerts Container -->
+    <div class="space-y-3 mb-4 sm:mb-6">
+      <!-- Unactioned Work Reminder Banner -->
+      <div id="unactionedReminderCard" class="card p-3.5 sm:p-4 border-l-4 border-l-rose-500 bg-rose-950/20 text-rose-100">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div class="flex items-start gap-3">
+            <div class="p-2 bg-rose-500/20 rounded-lg text-rose-400 shrink-0 mt-0.5">
+              <i class="fa-solid fa-bell-concierge text-base"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="font-bold text-xs sm:text-sm text-rose-200 uppercase tracking-wide">Unactioned Work Reminder</h3>
+                <span id="unactionedBadge" class="bg-rose-600/80 text-white px-2 py-0.5 rounded-full text-[10px] font-extrabold border border-rose-400/30">0 Pending</span>
+              </div>
+              <p id="unactionedSummaryText" class="text-[11px] sm:text-xs text-rose-300/80 leading-tight mt-1">Checking outstanding tasks...</p>
+            </div>
+          </div>
+          <button onclick="switchTab('services')" class="w-full sm:w-auto px-3.5 py-1.5 bg-rose-600/40 hover:bg-rose-600 text-white text-xs font-medium rounded-lg border border-rose-400/40 text-center shrink-0 transition">
+            Review Pending Work
+          </button>
+        </div>
+      </div>
+
+      <!-- Low Stock Alert Banner -->
+      <div id="stockAlertBanner" class="hidden card p-3.5 sm:p-4 border-l-4 border-l-amber-500 bg-amber-950/20 text-amber-200">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-amber-500/20 rounded-lg text-amber-400 shrink-0">
+              <i class="fa-solid fa-triangle-exclamation text-base"></i>
+            </div>
+            <div>
+              <h3 class="font-semibold text-xs sm:text-sm text-amber-200">Low Stock Alert Detected</h3>
+              <p id="alertMessage" class="text-[11px] sm:text-xs text-amber-300/80 leading-tight"></p>
+            </div>
+          </div>
+          <button onclick="switchTab('stock')" class="w-full sm:w-auto px-3.5 py-1.5 bg-amber-600/40 hover:bg-amber-600 text-amber-100 text-xs rounded-lg border border-amber-500/50 text-center transition">Manage Stock</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 1: ANALYTICS & DASHBOARD -->
+    <div id="view-analytics" class="space-y-4 sm:space-y-6">
+      
+      <!-- Timeframe Filter -->
+      <div class="card p-3.5 sm:p-4">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-filter text-blue-400 text-xs"></i>
+            <span class="text-xs font-bold text-slate-200 uppercase tracking-wider">Timeframe Filter</span>
+          </div>
+          
+          <div class="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+            <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+              <div class="flex items-center gap-1.5">
+                <span class="text-[11px] text-slate-400">From:</span>
+                <input type="date" id="filterStartDate" onchange="updateApp()" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[11px] text-slate-400">To:</span>
+                <input type="date" id="filterEndDate" onchange="updateApp()" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-1.5 pt-2 sm:pt-0 border-t sm:border-t-0 sm:border-l border-slate-700/80 sm:pl-3">
+              <button onclick="setPresetDateRange('month')" class="py-1 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] rounded-lg border border-slate-700 transition text-center">This Month</button>
+              <button onclick="setPresetDateRange('year')" class="py-1 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] rounded-lg border border-slate-700 transition text-center">This Year</button>
+              <button onclick="setPresetDateRange('all')" class="py-1 px-2.5 bg-blue-600 hover:bg-blue-500 text-white text-[11px] rounded-lg font-semibold transition text-center shadow-sm">All Time</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Printable Document Area -->
+      <div id="reportContainer" class="space-y-4 sm:space-y-6">
+        
+        <!-- Metrics Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div class="card p-3.5 sm:p-4 border-l-2 border-l-blue-500">
+            <span class="text-[11px] sm:text-xs text-slate-400 font-medium">Active Fleet Units</span>
+            <div class="flex justify-between items-end mt-2">
+              <span id="metric-units" class="text-2xl sm:text-3xl font-bold text-white tracking-tight">0</span>
+              <div class="p-2 bg-blue-500/10 rounded-lg text-blue-400"><i class="fa-solid fa-truck-front text-sm sm:text-base"></i></div>
+            </div>
+          </div>
+          <div class="card p-3.5 sm:p-4 border-l-2 border-l-rose-500">
+            <span class="text-[11px] sm:text-xs text-slate-400 font-medium">Pending Work Items</span>
+            <div class="flex justify-between items-end mt-2">
+              <span id="metric-pending" class="text-2xl sm:text-3xl font-bold text-rose-400 tracking-tight">0</span>
+              <div class="p-2 bg-rose-500/10 rounded-lg text-rose-400"><i class="fa-solid fa-clock-rotate-left text-sm sm:text-base"></i></div>
+            </div>
+          </div>
+          <div class="card p-3.5 sm:p-4 border-l-2 border-l-amber-500">
+            <span class="text-[11px] sm:text-xs text-slate-400 font-medium">Category Fleet Count</span>
+            <div class="flex justify-between items-end mt-2">
+              <span id="metric-categories" class="text-2xl sm:text-3xl font-bold text-amber-400 tracking-tight">4</span>
+              <div class="p-2 bg-amber-500/10 rounded-lg text-amber-400"><i class="fa-solid fa-tags text-sm sm:text-base"></i></div>
+            </div>
+          </div>
+          <div class="card p-3.5 sm:p-4 border-l-2 border-l-emerald-500">
+            <span class="text-[11px] sm:text-xs text-slate-400 font-medium">Low Stock Items</span>
+            <div class="flex justify-between items-end mt-2">
+              <span id="metric-lowstock" class="text-2xl sm:text-3xl font-bold text-emerald-400 tracking-tight">0</span>
+              <div class="p-2 bg-emerald-500/10 rounded-lg text-emerald-400"><i class="fa-solid fa-box-open text-sm sm:text-base"></i></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weekly Trend Breakdown Section -->
+        <div class="card p-4 sm:p-5">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+            <div>
+              <h2 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-2">
+                <i class="fa-solid fa-chart-line text-blue-400"></i> Weekly Activity & Service Trend
+              </h2>
+              <p class="text-[11px] text-slate-400 mt-0.5">Reported issues, replacements, and maintenance events timeline</p>
+            </div>
+            <span class="text-[10px] bg-slate-900 border border-slate-700/80 text-slate-300 px-2.5 py-1 rounded-full font-medium">Weekly Analysis</span>
+          </div>
+          <div class="h-56 sm:h-72 relative"><canvas id="chartWeeklyTrend"></canvas></div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          <div class="card p-4">
+            <div class="flex justify-between items-center mb-3">
+              <h2 class="text-xs sm:text-sm font-semibold text-slate-200"><i class="fa-solid fa-layer-group text-purple-400 mr-1.5"></i>Fleet Distribution</h2>
+              <span class="text-[10px] text-slate-400">By Category</span>
+            </div>
+            <div class="h-48 sm:h-60 relative"><canvas id="chartCategoryDist"></canvas></div>
+          </div>
+
+          <div class="card p-4">
+            <div class="flex justify-between items-center mb-3">
+              <h2 class="text-xs sm:text-sm font-semibold text-slate-200"><i class="fa-solid fa-cubes text-emerald-400 mr-1.5"></i>Demand vs Inventory Stock</h2>
+              <span class="text-[10px] text-slate-400">Accessories</span>
+            </div>
+            <div class="h-48 sm:h-60 relative"><canvas id="chartDemandSupply"></canvas></div>
+          </div>
+
+          <div class="card p-4">
+            <div class="flex justify-between items-center mb-3">
+              <h2 class="text-xs sm:text-sm font-semibold text-slate-200"><i class="fa-solid fa-users text-amber-400 mr-1.5"></i>Technician Workload</h2>
+              <span class="text-[10px] text-slate-400">Completed Tasks</span>
+            </div>
+            <div class="h-48 sm:h-60 relative"><canvas id="chartTechWorkload"></canvas></div>
+          </div>
+
+          <div class="card p-4">
+            <div class="flex justify-between items-center mb-3">
+              <h2 class="text-xs sm:text-sm font-semibold text-slate-200"><i class="fa-solid fa-screwdriver-wrench text-rose-400 mr-1.5"></i>Service Action Type</h2>
+              <span class="text-[10px] text-slate-400">Breakdown</span>
+            </div>
+            <div class="h-48 sm:h-60 relative"><canvas id="chartActionBreakdown"></canvas></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 2: UNITS & RADIO SPECS MANAGEMENT -->
+    <div id="view-units" class="hidden space-y-4 sm:space-y-6">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        
+        <!-- Add/Edit Unit Form -->
+        <div class="card p-4 sm:p-5 lg:col-span-1">
+          <div class="flex justify-between items-center mb-3">
+            <h2 id="unitFormTitle" class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-2">
+              <i class="fa-solid fa-circle-plus text-blue-400"></i> Register Fleet Unit
+            </h2>
+            <button id="cancelUnitBtn" onclick="resetUnitForm()" class="hidden text-[11px] text-slate-400 hover:text-white">Cancel Edit</button>
+          </div>
+          
+          <form id="unitForm" onsubmit="handleUnitSubmit(event)" class="space-y-3">
+            <input type="hidden" id="unitFormId" value="">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Unit ID / Name</label>
+              <input type="text" id="uName" placeholder="e.g. Unit DT-08" required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Category</label>
+              <select id="uCategory" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+                <option value="DTVV">DTVV</option>
+                <option value="PMVV">PMVV</option>
+                <option value="Support">Support</option>
+                <option value="A2B">A2B</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Radio Serial Number (SN)</label>
+              <input type="text" id="uRadioSN" placeholder="e.g. 681TGY1298" required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Radio Remark / Overall Condition</label>
+              <input type="text" id="uRadioRemark" placeholder="e.g. Operational - Clear reception" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">PTT Mic Remark</label>
+              <input type="text" id="uPttRemark" placeholder="e.g. Normal switch pressure, clear mic" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Antenna Remark</label>
+              <input type="text" id="uAntennaRemark" placeholder="e.g. VHF whip antenna good condition" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Bracket Antenna Remark</label>
+              <input type="text" id="uBracketRemark" placeholder="e.g. Roof bracket tight and rust-free" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+            </div>
+
+            <button type="submit" id="saveUnitBtn" class="w-full mt-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-lg text-xs transition shadow-md">Save Unit Specs</button>
+          </form>
+        </div>
+
+        <!-- Units Table & Filter Card -->
+        <div class="card p-4 sm:p-5 lg:col-span-2 space-y-3">
+          <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2">
+            <h2 class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-blue-400"></i> Registered Units & Installed Radio Specs
+            </h2>
+            <div class="flex gap-2">
+              <select id="filterCategorySelect" onchange="renderUnitsTable()" class="bg-slate-900/90 border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs text-slate-100 focus:outline-none">
+                <option value="ALL">All Categories</option>
+                <option value="DTVV">DTVV</option>
+                <option value="PMVV">PMVV</option>
+                <option value="Support">Support</option>
+                <option value="A2B">A2B</option>
+              </select>
+              <input type="text" id="searchUnit" onkeyup="renderUnitsTable()" placeholder="Search unit, SN, notes..." class="bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-1 text-xs text-slate-100 focus:outline-none">
+            </div>
+          </div>
+
+          <div class="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+            <table class="w-full text-left text-xs min-w-[650px]">
+              <thead class="bg-slate-950/80 text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-2.5">Unit & Category</th>
+                  <th class="p-2.5">Radio SN</th>
+                  <th class="p-2.5">Radio Remark</th>
+                  <th class="p-2.5">PTT Mic</th>
+                  <th class="p-2.5">Antenna</th>
+                  <th class="p-2.5">Bracket Antenna</th>
+                  <th class="p-2.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="unitsTableBody" class="divide-y divide-slate-800/60 text-slate-200">
+                <!-- Dynamic Content -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 3: SERVICES & REPAIRS LOG WITH EVIDENCE & LOCATION -->
+    <div id="view-services" class="hidden space-y-4 sm:space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        
+        <!-- Service Form Card -->
+        <div class="card p-4 sm:p-5 lg:col-span-1">
+          <div class="flex justify-between items-center mb-3">
+            <h2 id="svcFormTitle" class="text-xs sm:text-sm font-semibold text-slate-200 flex items-center gap-2">
+              <i class="fa-solid fa-circle-plus text-blue-400"></i> Log Service / Maintenance
+            </h2>
+            <button id="cancelSvcBtn" onclick="resetServiceForm()" class="hidden text-[11px] text-slate-400 hover:text-white">Cancel Edit</button>
+          </div>
+
+          <form id="serviceForm" onsubmit="handleServiceSubmit(event)" class="space-y-3">
+            <input type="hidden" id="svcFormId" value="">
+            
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Select Fleet Unit</label>
+              <select id="svcUnitSelect" onchange="autofillServiceRadioSN()" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Radio Serial ID</label>
+              <input type="text" id="svcRadioId" placeholder="e.g. M3886-A01" required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+            </div>
+
+            <!-- LOCATION INPUT FOR REPORT ACCURACY -->
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1"><i class="fa-solid fa-location-dot text-rose-400 mr-1"></i> Location / Site Area</label>
+              <input type="text" id="svcLocation" placeholder="e.g. Workshop Bay 2 / Site Alpha Pit 3" required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Radio Condition</label>
+              <select id="svcCondition" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+                <option value="Good">Good / Operational</option>
+                <option value="Minor Issue">Minor Issue</option>
+                <option value="Under Repair">Under Repair</option>
+                <option value="Decommissioned">Decommissioned</option>
+              </select>
+            </div>
+
+            <!-- CUSTOM SELECTION / FREELY ADD OPTION WITH DATALIST -->
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1"><i class="fa-solid fa-keyboard text-amber-400 mr-1"></i> Accessory / Part Involved</label>
+              <input type="text" id="svcAccessory" list="accessoryListOptions" placeholder="Type custom part or select..." required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+              <datalist id="accessoryListOptions">
+                <!-- Dynamically populated from inventory stock & default list -->
+              </datalist>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Action Category</label>
+              <select id="svcType" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+                <option value="Replacement">Accessory Replacement</option>
+                <option value="Repair">Accessory / Radio Repair</option>
+                <option value="Routine Inspection">Routine Inspection</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Technician PIC</label>
+              <input type="text" id="svcTech" placeholder="Technician Name" required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+            </div>
+
+            <!-- ACTIVITY REMARKS FIELD -->
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1"><i class="fa-solid fa-comment-dots text-cyan-400 mr-1"></i> Activity Remarks / Notes</label>
+              <textarea id="svcRemarks" rows="2" placeholder="e.g. Replaced connector due to wear, tested clean signal..." class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500"></textarea>
+            </div>
+
+            <!-- PHOTO EVIDENCE UPLOAD INPUT -->
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1"><i class="fa-solid fa-camera text-emerald-400 mr-1"></i> Attach Activity Evidence (Picture)</label>
+              <input type="file" id="svcEvidenceInput" accept="image/*" class="w-full text-xs text-slate-300 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-blue-300 hover:file:bg-slate-700 border border-slate-700/80 rounded-lg bg-slate-900/90">
+            </div>
+
+            <!-- DOWNTIME START & END TIME INPUTS -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Time Down (Start)</label>
+                <input type="datetime-local" id="svcTimeDown" required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Time Work Done</label>
+                <input type="datetime-local" id="svcTimeDone" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Qty</label>
+                <input type="number" id="svcDemand" value="1" min="1" required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Status</label>
+                <select id="svcStatus" class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+                  <option value="In Progress">In Progress (Pending)</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" id="saveSvcBtn" class="w-full mt-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-lg text-xs transition shadow-md">Save Service Log</button>
+          </form>
+        </div>
+
+        <!-- Service Logs Table Card -->
+        <div class="card p-4 sm:p-5 lg:col-span-2">
+          <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 mb-3">
+            <h2 class="text-xs sm:text-sm font-semibold text-slate-200"><i class="fa-solid fa-list-check text-blue-400 mr-1.5"></i>Service & Maintenance Activity Records</h2>
+            
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="flex items-center gap-1.5 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-700/80">
+                <span class="text-[10px] text-slate-400 uppercase font-bold">Sort:</span>
+                <select id="svcSortBy" onchange="renderServiceTable()" class="bg-transparent text-xs text-slate-100 focus:outline-none">
+                  <option value="timeDown">Time Down (Newest)</option>
+                  <option value="downtime">Total Downtime</option>
+                  <option value="unitName">Unit Name</option>
+                  <option value="location">Location</option>
+                  <option value="status">Status</option>
+                  <option value="tech">Technician</option>
+                </select>
+              </div>
+              <input type="text" id="searchService" onkeyup="renderServiceTable()" placeholder="Search location, serial, remarks..." class="bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-1 text-xs text-slate-100 focus:outline-none">
+            </div>
+          </div>
+
+          <div class="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+            <table class="w-full text-left text-xs min-w-[720px]">
+              <thead class="bg-slate-950/80 text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-2 cursor-pointer hover:text-white" onclick="setServiceSort('unitName')">Unit & Location <i class="fa-solid fa-sort text-[10px]"></i></th>
+                  <th class="p-2 cursor-pointer hover:text-white" onclick="setServiceSort('type')">Action, Part & Remarks <i class="fa-solid fa-sort text-[10px]"></i></th>
+                  <th class="p-2">Evidence Photo</th>
+                  <th class="p-2 cursor-pointer hover:text-white" onclick="setServiceSort('tech')">Tech PIC <i class="fa-solid fa-sort text-[10px]"></i></th>
+                  <th class="p-2 cursor-pointer hover:text-white" onclick="setServiceSort('timeDown')">Time Down / Done <i class="fa-solid fa-sort text-[10px]"></i></th>
+                  <th class="p-2 cursor-pointer hover:text-white" onclick="setServiceSort('downtime')">Downtime <i class="fa-solid fa-sort text-[10px]"></i></th>
+                  <th class="p-2 cursor-pointer hover:text-white" onclick="setServiceSort('status')">Status <i class="fa-solid fa-sort text-[10px]"></i></th>
+                  <th class="p-2 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="serviceTableBody" class="divide-y divide-slate-800/60 text-slate-200">
+                <!-- Dynamic Content -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 4: INVENTORY STOCK MANAGEMENT -->
+    <div id="view-stock" class="hidden space-y-4 sm:space-y-6">
+      
+      <div class="card p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h2 class="text-xs sm:text-sm font-semibold text-slate-200"><i class="fa-solid fa-cubes text-emerald-400 mr-2"></i>Accessory Stock Level & Inventory Sync</h2>
+          <p class="text-[11px] sm:text-xs text-slate-400">Manage radio spare parts, threshold alerts, and custom inventory items.</p>
+        </div>
+        <div class="w-full sm:w-auto grid grid-cols-2 sm:flex gap-2">
+          <button onclick="exportStockCSV()" class="px-3 py-2 sm:py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs rounded-lg font-medium border border-slate-700 transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-file-export text-emerald-400"></i> Export CSV
+          </button>
+          <label class="px-3 py-2 sm:py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs rounded-lg font-medium cursor-pointer border border-slate-700 transition flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-file-import text-blue-400"></i> Import CSV
+            <input type="file" id="csvFileInput" accept=".csv" onchange="importStockCSV(event)" class="hidden">
+          </label>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <!-- Add/Edit Stock Form -->
+        <div class="card p-4 sm:p-5 lg:col-span-1">
+          <div class="flex justify-between items-center mb-3">
+            <h2 id="stockFormTitle" class="text-xs sm:text-sm font-bold text-slate-200 flex items-center gap-2">
+              <i class="fa-solid fa-box-archive text-emerald-400"></i> Add Inventory Item
+            </h2>
+            <button id="cancelStockBtn" onclick="resetStockForm()" class="hidden text-[11px] text-slate-400 hover:text-white">Cancel Edit</button>
+          </div>
+
+          <form id="stockForm" onsubmit="handleStockSubmit(event)" class="space-y-3">
+            <input type="hidden" id="stockFormId" value="">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Item Name</label>
+              <input type="text" id="stkName" placeholder="e.g. VHF Whip Antenna" required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Category</label>
+              <input type="text" id="stkCategory" placeholder="e.g. Antenna, Cables, Mounts" required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Current Stock</label>
+                <input type="number" id="stkCount" min="0" value="5" required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Min Threshold</label>
+                <input type="number" id="stkMin" min="0" value="3" required class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500">
+              </div>
+            </div>
+
+            <button type="submit" id="saveStockBtn" class="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-lg text-xs transition shadow-md">Save Inventory Item</button>
+          </form>
+        </div>
+
+        <!-- Inventory List Table -->
+        <div class="card p-4 sm:p-5 lg:col-span-2">
+          <div class="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+            <table class="w-full text-left text-xs min-w-[550px]">
+              <thead class="bg-slate-950/80 text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-2.5">Item & Category</th>
+                  <th class="p-2.5">Stock</th>
+                  <th class="p-2.5">Min Threshold</th>
+                  <th class="p-2.5">Status</th>
+                  <th class="p-2.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="stockTableBody" class="divide-y divide-slate-800/60 text-slate-200">
+                <!-- Dynamic Content -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: DATA CONSOLE & FULL JSON EDIT -->
+    <div id="view-console" class="hidden space-y-4">
+      <div class="card p-4 sm:p-5">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
+          <div>
+            <h2 class="text-xs sm:text-sm font-bold text-amber-400 flex items-center gap-2">
+              <i class="fa-solid fa-code"></i> Raw System State Console (JSON Editor)
+            </h2>
+            <p class="text-[11px] text-slate-400">Direct inspect and modify JSON database records.</p>
+          </div>
+          <div class="flex gap-2 w-full sm:w-auto">
+            <button onclick="saveConsoleJSON()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-slate-950 text-xs font-bold rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm">
+              <i class="fa-solid fa-floppy-disk"></i> Apply JSON State
+            </button>
+            <button onclick="resetAppToDefaultData()" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm">
+              <i class="fa-solid fa-rotate-left"></i> Reset Defaults
+            </button>
+          </div>
+        </div>
+        <textarea id="jsonEditorArea" class="code-editor w-full h-80 bg-slate-950/90 text-emerald-400 p-3 text-xs rounded-lg border border-slate-800 focus:outline-none focus:border-amber-500" spellcheck="false"></textarea>
+      </div>
+    </div>
+
+    <!-- TAB 6: COMPLETE CUSTOMIZATION MENU (LOGO, HEADER, BACKGROUND, TAB ICON, THEME) -->
+    <div id="view-settings" class="hidden space-y-4 sm:space-y-6">
+      <div class="card p-4 sm:p-5">
+        <div class="flex items-center gap-3 mb-4 border-b border-slate-800 pb-3">
+          <div class="p-2 bg-cyan-500/20 text-cyan-400 rounded-lg"><i class="fa-solid fa-palette text-lg"></i></div>
+          <div>
+            <h2 class="text-xs sm:text-sm font-bold text-white">System Brand & Interface Customization</h2>
+            <p class="text-[11px] text-slate-400">Upload custom logo, background wallpapers, tab favicons, and customize theme colors.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+          
+          <!-- BRAND & MEDIA UPLOADS (LOCAL DRIVE) -->
+          <div class="space-y-4">
+            <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-upload"></i> Custom Media Uploads
+            </h3>
+
+            <!-- Header Logo Upload -->
+            <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800 space-y-2">
+              <label class="block text-xs font-semibold text-slate-200">
+                <i class="fa-solid fa-image text-blue-400 mr-1"></i> Header Brand Logo / Icon
+              </label>
+              <div class="flex items-center gap-3">
+                <input type="file" id="cfgLogoInput" accept="image/*" onchange="handleMediaUpload(event, 'customLogoUrl')" class="w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer">
+                <button onclick="clearCustomMedia('customLogoUrl')" class="px-2 py-1 text-[11px] bg-slate-800 text-rose-400 hover:bg-rose-950 rounded border border-slate-700 shrink-0">Remove</button>
+              </div>
+              <p class="text-[10px] text-slate-400">Replaces header monster icon with your custom corporate logo.</p>
+            </div>
+
+            <!-- Page Background Wallpaper Upload -->
+            <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800 space-y-2">
+              <label class="block text-xs font-semibold text-slate-200">
+                <i class="fa-solid fa-desktop text-purple-400 mr-1"></i> Page Background Image (Wallpaper)
+              </label>
+              <div class="flex items-center gap-3">
+                <input type="file" id="cfgBgImgInput" accept="image/*" onchange="handleMediaUpload(event, 'customBgUrl')" class="w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:bg-purple-600 file:text-white hover:file:bg-purple-500 cursor-pointer">
+                <button onclick="clearCustomMedia('customBgUrl')" class="px-2 py-1 text-[11px] bg-slate-800 text-rose-400 hover:bg-rose-950 rounded border border-slate-700 shrink-0">Remove</button>
+              </div>
+              <p class="text-[10px] text-slate-400">Upload background wallpaper from local drive (JPG/PNG).</p>
+            </div>
+
+            <!-- Browser Tab Icon (Favicon) Upload -->
+            <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800 space-y-2">
+              <label class="block text-xs font-semibold text-slate-200">
+                <i class="fa-solid fa-window-maximize text-emerald-400 mr-1"></i> Tab Icon (Favicon)
+              </label>
+              <div class="flex items-center gap-3">
+                <input type="file" id="cfgFaviconInput" accept="image/*" onchange="handleMediaUpload(event, 'customFaviconUrl')" class="w-full text-xs text-slate-400 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer">
+                <button onclick="clearCustomMedia('customFaviconUrl')" class="px-2 py-1 text-[11px] bg-slate-800 text-rose-400 hover:bg-rose-950 rounded border border-slate-700 shrink-0">Remove</button>
+              </div>
+              <p class="text-[10px] text-slate-400">Sets the small icon shown in browser tab title.</p>
+            </div>
+
+          </div>
+
+          <!-- COLORS & NAV ICONS CUSTOMIZATION -->
+          <div class="space-y-4">
+            <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-paint-roller"></i> Theme Colors & Icons
+            </h3>
+
+            <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800 space-y-3">
+              <div>
+                <label class="block text-xs text-slate-300 font-medium mb-1">Page Solid Color (If no background image set)</label>
+                <div class="flex items-center gap-2">
+                  <input type="color" id="cfgBgColor" value="#0f172a" class="h-8 w-12 bg-transparent cursor-pointer rounded">
+                  <button onclick="setThemePreset('#0f172a', 'rgba(30, 41, 59, 0.85)')" class="px-2.5 py-1 bg-slate-800 text-xs rounded text-slate-200 border border-slate-700 hover:bg-slate-700">Dark Slate</button>
+                  <button onclick="setThemePreset('#090d16', 'rgba(17, 24, 39, 0.85)')" class="px-2.5 py-1 bg-gray-900 text-xs rounded text-slate-200 border border-slate-700 hover:bg-gray-800">Midnight</button>
+                  <button onclick="setThemePreset('#051923', 'rgba(0, 53, 84, 0.85)')" class="px-2.5 py-1 bg-cyan-950 text-xs rounded text-cyan-200 border border-cyan-800 hover:bg-cyan-900">Ocean</button>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs text-slate-300 font-medium mb-1">Card Container Color</label>
+                <input type="color" id="cfgCardColor" value="#1e293b" class="h-8 w-12 bg-transparent cursor-pointer rounded">
+              </div>
+            </div>
+
+            <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800 space-y-3">
+              <h4 class="text-xs font-semibold text-slate-200">Navigation Tab FontAwesome Icons</h4>
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <label class="block text-slate-400 mb-1">Dashboard Icon</label>
+                  <input type="text" id="cfgIconDashboard" value="fa-chart-line" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-slate-100">
+                </div>
+                <div>
+                  <label class="block text-slate-400 mb-1">Units Icon</label>
+                  <input type="text" id="cfgIconUnits" value="fa-truck-field" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-slate-100">
+                </div>
+                <div>
+                  <label class="block text-slate-400 mb-1">Services Icon</label>
+                  <input type="text" id="cfgIconServices" value="fa-wrench" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-slate-100">
+                </div>
+                <div>
+                  <label class="block text-slate-400 mb-1">Stock Icon</label>
+                  <input type="text" id="cfgIconStock" value="fa-boxes-stacked" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-slate-100">
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-800 flex justify-end gap-2">
+          <button onclick="applyCustomizationSettings()" class="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs rounded-lg shadow-md flex items-center gap-2 transition">
+            <i class="fa-solid fa-check"></i> Save & Apply Customizations
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- EVIDENCE FULL IMAGE MODAL -->
+  <div id="evidenceModal" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
+    <div class="card max-w-2xl w-full p-4 space-y-3 relative">
+      <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+        <h3 id="modalTitle" class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-image text-emerald-400"></i> Service Activity Evidence
+        </h3>
+        <button onclick="closeEvidenceModal()" class="text-slate-400 hover:text-white text-lg font-bold px-2">&times;</button>
+      </div>
+      <div class="flex justify-center bg-slate-950 rounded-lg p-2 max-h-[70vh] overflow-hidden">
+        <img id="modalImage" src="" class="max-h-[65vh] object-contain rounded" alt="Evidence Large View">
+      </div>
+      <div class="flex justify-end">
+        <button onclick="closeEvidenceModal()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg border border-slate-700">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPLICATION LOGIC JavaScript -->
+  <script>
+    // --- GMT+8 Clock Logic ---
+    function updateClockGMT8() {
+      const now = new Date();
+      const options = {
+        timeZone: 'Asia/Singapore',
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      };
+      const timeStr = new Intl.DateTimeFormat('en-GB', options).format(now);
+      const clockEl = document.getElementById('clockGMT8');
+      if (clockEl) {
+        clockEl.innerText = `${timeStr} (GMT+8)`;
+      }
+    }
+    setInterval(updateClockGMT8, 1000);
+    updateClockGMT8();
+
+    // --- DEFAULT INITIAL DATA ---
+    const DEFAULT_UNITS = [
+      {
+        id: 'u-1',
+        name: 'Unit DT-01',
+        category: 'DTVV',
+        radioSN: 'M3886-SN89121',
+        radioRemark: 'Operational - Clear reception',
+        pttRemark: 'Normal pressure switch',
+        antennaRemark: 'VHF 1/4 wave whip good',
+        bracketRemark: 'Roof bracket securely bolted'
+      },
+      {
+        id: 'u-2',
+        name: 'Unit PM-04',
+        category: 'PMVV',
+        radioSN: 'M3886-SN44019',
+        radioRemark: 'Slight audio static at high vol',
+        pttRemark: 'Cable worn near connector',
+        antennaRemark: 'Antenna element slightly bent',
+        bracketRemark: 'Bracket mounting screws tight'
+      },
+      {
+        id: 'u-3',
+        name: 'Unit SP-09',
+        category: 'Support',
+        radioSN: 'M3886-SN11823',
+        radioRemark: 'Newly installed - Excellent',
+        pttRemark: 'Brand new heavy-duty mic',
+        antennaRemark: 'High gain whip antenna',
+        bracketRemark: 'Heavy duty stainless bracket'
+      },
+      {
+        id: 'u-4',
+        name: 'Unit A2B-02',
+        category: 'A2B',
+        radioSN: 'M3886-SN99304',
+        radioRemark: 'Operational',
+        pttRemark: 'Regular PTT mic operational',
+        antennaRemark: 'Standard VHF antenna',
+        bracketRemark: 'Side bracket securely attached'
+      }
+    ];
+
+    const DEFAULT_SERVICES = [
+      {
+        id: 's-1',
+        unitId: 'u-2',
+        unitName: 'Unit PM-04',
+        radioId: 'M3886-SN44019',
+        location: 'Workshop Bay 1',
+        condition: 'Minor Issue',
+        accessory: 'Microphone Cable',
+        type: 'Repair',
+        tech: 'Alex Rivera',
+        remarks: 'Inspected worn insulation near joint, re-soldered connector pin.',
+        demand: 1,
+        status: 'In Progress',
+        evidence: '',
+        date: '2026-08-15',
+        timeDown: '2026-08-15T08:00',
+        timeDone: ''
+      },
+      {
+        id: 's-2',
+        unitId: 'u-1',
+        unitName: 'Unit DT-01',
+        radioId: 'M3886-SN89121',
+        location: 'Pit 3 East Area',
+        condition: 'Good',
+        accessory: 'BNC Connector',
+        type: 'Replacement',
+        tech: 'David Miller',
+        remarks: 'Replaced corroded connector with new high-frequency gold pin adapter.',
+        demand: 2,
+        status: 'Completed',
+        evidence: '',
+        date: '2026-08-18',
+        timeDown: '2026-08-18T09:30',
+        timeDone: '2026-08-18T13:45'
+      }
+    ];
+
+    const DEFAULT_STOCK = [
+      { id: 'stk-1', name: 'BNC Connector', category: 'Connectors', count: 18, min: 5 },
+      { id: 'stk-2', name: 'Antenna Bracket', category: 'Mounts', count: 3, min: 5 },
+      { id: 'stk-3', name: 'Antenna VHF', category: 'Antennas', count: 8, min: 4 },
+      { id: 'stk-4', name: 'Microphone Cable', category: 'Cables', count: 2, min: 4 },
+      { id: 'stk-5', name: 'Power Supply 12V', category: 'Power', count: 10, min: 3 },
+      { id: 'stk-6', name: 'Radio Mainbody', category: 'Hardware', count: 4, min: 2 }
+    ];
+
+    const DEFAULT_SETTINGS = {
+      bgColor: '#0f172a',
+      cardColor: 'rgba(30, 41, 59, 0.85)',
+      iconDashboard: 'fa-chart-line',
+      iconUnits: 'fa-truck-field',
+      iconServices: 'fa-wrench',
+      iconStock: 'fa-boxes-stacked',
+      customLogoUrl: '',
+      customBgUrl: '',
+      customFaviconUrl: ''
+    };
+
+    // --- APP STATE STORAGE ---
+    let unitsData = JSON.parse(localStorage.getItem('m3886_units_v4')) || DEFAULT_UNITS;
+    let servicesData = JSON.parse(localStorage.getItem('m3886_services_v4')) || DEFAULT_SERVICES;
+    let stockData = JSON.parse(localStorage.getItem('m3886_stock_v4')) || DEFAULT_STOCK;
+    let themeSettings = JSON.parse(localStorage.getItem('m3886_settings_v4')) || DEFAULT_SETTINGS;
+
+    // Sorting state
+    let serviceSortField = 'timeDown';
+    let serviceSortAsc = false;
+
+    // Chart instances
+    let chartWeeklyTrend, chartCategoryDist, chartDemandSupply, chartTechWorkload, chartActionBreakdown;
+
+    function saveState() {
+      localStorage.setItem('m3886_units_v4', JSON.stringify(unitsData));
+      localStorage.setItem('m3886_services_v4', JSON.stringify(servicesData));
+      localStorage.setItem('m3886_stock_v4', JSON.stringify(stockData));
+      localStorage.setItem('m3886_settings_v4', JSON.stringify(themeSettings));
+      updateApp();
+    }
+
+    function resetAppToDefaultData() {
+      if (confirm("Reset all fleet units, services, stock, and customization to initial defaults?")) {
+        unitsData = JSON.parse(JSON.stringify(DEFAULT_UNITS));
+        servicesData = JSON.parse(JSON.stringify(DEFAULT_SERVICES));
+        stockData = JSON.parse(JSON.stringify(DEFAULT_STOCK));
+        themeSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+        saveState();
+        applyCustomizationSettings();
+      }
+    }
+
+    // --- TAB NAVIGATION ---
+    function switchTab(tabId) {
+      const tabs = ['analytics', 'units', 'services', 'stock', 'console', 'settings'];
+      tabs.forEach(t => {
+        const view = document.getElementById(`view-${t}`);
+        const btn = document.getElementById(`tab-${t}`);
+        if (t === tabId) {
+          view.classList.remove('hidden');
+          btn.className = "px-3.5 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition bg-blue-600 text-white flex items-center gap-2 shadow-sm";
+        } else {
+          view.classList.add('hidden');
+          btn.className = "px-3.5 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition text-slate-400 hover:text-white flex items-center gap-2";
+        }
+      });
+
+      if (tabId === 'console') {
+        populateConsoleJSON();
+      }
+      setTimeout(updateApp, 50);
+    }
+
+    // --- DATE PRESETS & FILTERS ---
+    function setPresetDateRange(preset) {
+      const startEl = document.getElementById('filterStartDate');
+      const endEl = document.getElementById('filterEndDate');
+      const now = new Date();
+
+      if (preset === 'month') {
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        startEl.value = firstDay.toISOString().split('T')[0];
+        endEl.value = now.toISOString().split('T')[0];
+      } else if (preset === 'year') {
+        const firstDay = new Date(now.getFullYear(), 0, 1);
+        startEl.value = firstDay.toISOString().split('T')[0];
+        endEl.value = now.toISOString().split('T')[0];
+      } else {
+        startEl.value = '';
+        endEl.value = '';
+      }
+      updateApp();
+    }
+
+    function getFilteredServices() {
+      const start = document.getElementById('filterStartDate').value;
+      const end = document.getElementById('filterEndDate').value;
+
+      return servicesData.filter(svc => {
+        if (!svc.date) return true;
+        if (start && svc.date < start) return false;
+        if (end && svc.date > end) return false;
+        return true;
+      });
+    }
+
+    // --- DYNAMIC ACCESSORY DATALIST OPTION POPULATION ---
+    function updateAccessoryDatalist() {
+      const datalist = document.getElementById('accessoryListOptions');
+      if (!datalist) return;
+
+      const baseOptions = [
+        "BNC Connector",
+        "Antenna Bracket",
+        "Antenna VHF",
+        "Microphone Cable",
+        "Power Supply 12V",
+        "Radio Mainbody",
+        "PTT Microphone",
+        "DC Power Cable",
+        "Fuse Holder 15A"
+      ];
+
+      // Merge defaults, stock inventory names, and existing service parts
+      const stockNames = stockData.map(s => s.name);
+      const serviceNames = servicesData.map(s => s.accessory).filter(Boolean);
+      
+      const allUnique = Array.from(new Set([...baseOptions, ...stockNames, ...serviceNames]));
+      datalist.innerHTML = allUnique.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+    }
+
+    // --- UNIT MANAGEMENT (CRUD) ---
+    function populateUnitSelectDropdowns() {
+      const sel = document.getElementById('svcUnitSelect');
+      if (!sel) return;
+      sel.innerHTML = unitsData.map(u => `<option value="${u.id}">${u.name} [${u.category}]</option>`).join('');
+      autofillServiceRadioSN();
+    }
+
+    function autofillServiceRadioSN() {
+      const selId = document.getElementById('svcUnitSelect').value;
+      const unit = unitsData.find(u => u.id === selId);
+      if (unit) {
+        document.getElementById('svcRadioId').value = unit.radioSN || '';
+      }
+    }
+
+    function handleUnitSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('unitFormId').value || 'u-' + Date.now();
+      const name = document.getElementById('uName').value.trim();
+      const category = document.getElementById('uCategory').value;
+      const radioSN = document.getElementById('uRadioSN').value.trim();
+      const radioRemark = document.getElementById('uRadioRemark').value.trim();
+      const pttRemark = document.getElementById('uPttRemark').value.trim();
+      const antennaRemark = document.getElementById('uAntennaRemark').value.trim();
+      const bracketRemark = document.getElementById('uBracketRemark').value.trim();
+
+      const existingIndex = unitsData.findIndex(u => u.id === id);
+      const unitObj = { id, name, category, radioSN, radioRemark, pttRemark, antennaRemark, bracketRemark };
+
+      if (existingIndex >= 0) {
+        unitsData[existingIndex] = unitObj;
+      } else {
+        unitsData.push(unitObj);
+      }
+
+      resetUnitForm();
+      saveState();
+    }
+
+    function editUnit(unitId) {
+      const unit = unitsData.find(u => u.id === unitId);
+      if (!unit) return;
+
+      document.getElementById('unitFormId').value = unit.id;
+      document.getElementById('uName').value = unit.name;
+      document.getElementById('uCategory').value = unit.category;
+      document.getElementById('uRadioSN').value = unit.radioSN || '';
+      document.getElementById('uRadioRemark').value = unit.radioRemark || '';
+      document.getElementById('uPttRemark').value = unit.pttRemark || '';
+      document.getElementById('uAntennaRemark').value = unit.antennaRemark || '';
+      document.getElementById('uBracketRemark').value = unit.bracketRemark || '';
+
+      document.getElementById('unitFormTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-blue-400"></i> Edit Fleet Unit Specs';
+      document.getElementById('cancelUnitBtn').classList.remove('hidden');
+    }
+
+    function deleteUnit(unitId) {
+      if (confirm("Delete this fleet unit and its radio record?")) {
+        unitsData = unitsData.filter(u => u.id !== unitId);
+        saveState();
+      }
+    }
+
+    function resetUnitForm() {
+      document.getElementById('unitFormId').value = '';
+      document.getElementById('unitForm').reset();
+      document.getElementById('unitFormTitle').innerHTML = '<i class="fa-solid fa-circle-plus text-blue-400"></i> Register Fleet Unit';
+      document.getElementById('cancelUnitBtn').classList.add('hidden');
+    }
+
+    function renderUnitsTable() {
+      const tbody = document.getElementById('unitsTableBody');
+      const catFilter = document.getElementById('filterCategorySelect').value;
+      const search = document.getElementById('searchUnit').value.toLowerCase();
+
+      const filtered = unitsData.filter(u => {
+        if (catFilter !== 'ALL' && u.category !== catFilter) return false;
+        if (search) {
+          const combined = `${u.name} ${u.category} ${u.radioSN} ${u.radioRemark} ${u.pttRemark} ${u.antennaRemark} ${u.bracketRemark}`.toLowerCase();
+          if (!combined.includes(search)) return false;
+        }
+        return true;
+      });
+
+      tbody.innerHTML = filtered.map(u => `
+        <tr class="hover:bg-slate-800/40">
+          <td class="p-2.5">
+            <div class="font-bold text-white text-xs">${u.name}</div>
+            <span class="inline-block px-1.5 py-0.5 mt-0.5 rounded text-[10px] font-semibold ${
+              u.category === 'DTVV' ? 'bg-blue-900/80 text-blue-300 border border-blue-700/50' :
+              u.category === 'PMVV' ? 'bg-purple-900/80 text-purple-300 border border-purple-700/50' :
+              u.category === 'Support' ? 'bg-amber-900/80 text-amber-300 border border-amber-700/50' :
+              'bg-emerald-900/80 text-emerald-300 border border-emerald-700/50'
+            }">${u.category}</span>
+          </td>
+          <td class="p-2.5 font-mono text-xs text-blue-300">${u.radioSN || '-'}</td>
+          <td class="p-2.5 text-slate-300">${u.radioRemark || '-'}</td>
+          <td class="p-2.5 text-slate-300">${u.pttRemark || '-'}</td>
+          <td class="p-2.5 text-slate-300">${u.antennaRemark || '-'}</td>
+          <td class="p-2.5 text-slate-300">${u.bracketRemark || '-'}</td>
+          <td class="p-2.5 text-right whitespace-nowrap">
+            <button onclick="editUnit('${u.id}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-blue-300 rounded text-[11px] mr-1 border border-slate-700">
+              <i class="fa-solid fa-pen"></i> Edit
+            </button>
+            <button onclick="deleteUnit('${u.id}')" class="px-2 py-1 bg-slate-800 hover:bg-rose-900/80 text-rose-300 rounded text-[11px] border border-slate-700">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // --- DOWNTIME CALCULATOR HELPER ---
+    function calculateDowntimeMinutes(timeDownStr, timeDoneStr, status) {
+      if (!timeDownStr) return 0;
+      const start = new Date(timeDownStr);
+      const end = (status === 'Completed' && timeDoneStr) ? new Date(timeDoneStr) : new Date();
+      const diffMs = end - start;
+      return diffMs > 0 ? Math.floor(diffMs / 60000) : 0;
+    }
+
+    function formatDowntimeDisplay(timeDownStr, timeDoneStr, status) {
+      if (!timeDownStr) return 'N/A';
+      const totalMins = calculateDowntimeMinutes(timeDownStr, timeDoneStr, status);
+      const days = Math.floor(totalMins / (24 * 60));
+      const hours = Math.floor((totalMins % (24 * 60)) / 60);
+      const mins = totalMins % 60;
+
+      let parts = [];
+      if (days > 0) parts.push(`${days}d`);
+      if (hours > 0) parts.push(`${hours}h`);
+      parts.push(`${mins}m`);
+      return parts.join(' ');
+    }
+
+    // --- SERVICE MANAGEMENT WITH EDIT, REMARKS, CUSTOM ACCESSORY & EVIDENCE ---
+    async function handleServiceSubmit(e) {
+      e.preventDefault();
+      const svcId = document.getElementById('svcFormId').value;
+      const unitId = document.getElementById('svcUnitSelect').value;
+      const unit = unitsData.find(u => u.id === unitId);
+      const unitName = unit ? unit.name : 'Unknown';
+      const location = document.getElementById('svcLocation').value.trim();
+      const timeDown = document.getElementById('svcTimeDown').value;
+      let timeDone = document.getElementById('svcTimeDone').value;
+      const status = document.getElementById('svcStatus').value;
+      const remarks = document.getElementById('svcRemarks').value.trim();
+
+      if (status === 'Completed' && !timeDone) {
+        timeDone = new Date().toISOString().slice(0, 16);
+      }
+
+      // Preserve existing evidence photo if no new file selected during edit
+      let evidenceBase64 = '';
+      const existingService = svcId ? servicesData.find(s => s.id === svcId) : null;
+      if (existingService && existingService.evidence) {
+        evidenceBase64 = existingService.evidence;
+      }
+
+      const evidenceInput = document.getElementById('svcEvidenceInput');
+      if (evidenceInput.files && evidenceInput.files[0]) {
+        evidenceBase64 = await readFileAsBase64(evidenceInput.files[0]);
+      }
+
+      const serviceObj = {
+        id: svcId || ('s-' + Date.now()),
+        unitId,
+        unitName,
+        location: location || 'General Area',
+        radioId: document.getElementById('svcRadioId').value,
+        condition: document.getElementById('svcCondition').value,
+        accessory: document.getElementById('svcAccessory').value.trim(),
+        type: document.getElementById('svcType').value,
+        tech: document.getElementById('svcTech').value,
+        remarks,
+        demand: parseInt(document.getElementById('svcDemand').value) || 1,
+        status,
+        evidence: evidenceBase64,
+        date: timeDown ? timeDown.split('T')[0] : new Date().toISOString().split('T')[0],
+        timeDown,
+        timeDone
+      };
+
+      if (svcId) {
+        const idx = servicesData.findIndex(s => s.id === svcId);
+        if (idx >= 0) servicesData[idx] = serviceObj;
+      } else {
+        servicesData.unshift(serviceObj);
+      }
+
+      resetServiceForm();
+      saveState();
+    }
+
+    function editService(svcId) {
+      const svc = servicesData.find(s => s.id === svcId);
+      if (!svc) return;
+
+      document.getElementById('svcFormId').value = svc.id;
+      document.getElementById('svcUnitSelect').value = svc.unitId || '';
+      document.getElementById('svcRadioId').value = svc.radioId || '';
+      document.getElementById('svcLocation').value = svc.location || '';
+      document.getElementById('svcCondition').value = svc.condition || 'Good';
+      document.getElementById('svcAccessory').value = svc.accessory || '';
+      document.getElementById('svcType').value = svc.type || 'Replacement';
+      document.getElementById('svcTech').value = svc.tech || '';
+      document.getElementById('svcRemarks').value = svc.remarks || '';
+      document.getElementById('svcTimeDown').value = svc.timeDown || '';
+      document.getElementById('svcTimeDone').value = svc.timeDone || '';
+      document.getElementById('svcDemand').value = svc.demand || 1;
+      document.getElementById('svcStatus').value = svc.status || 'In Progress';
+
+      document.getElementById('svcFormTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-blue-400"></i> Edit Service Log';
+      document.getElementById('cancelSvcBtn').classList.remove('hidden');
+
+      // Scroll to form smoothly on mobile
+      document.getElementById('serviceForm').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetServiceForm() {
+      document.getElementById('svcFormId').value = '';
+      document.getElementById('serviceForm').reset();
+      document.getElementById('svcFormTitle').innerHTML = '<i class="fa-solid fa-circle-plus text-blue-400"></i> Log Service / Maintenance';
+      document.getElementById('cancelSvcBtn').classList.add('hidden');
+      populateUnitSelectDropdowns();
+    }
+
+    function toggleServiceStatus(svcId) {
+      const svc = servicesData.find(s => s.id === svcId);
+      if (svc) {
+        if (svc.status === 'Completed') {
+          svc.status = 'In Progress';
+          svc.timeDone = '';
+        } else {
+          svc.status = 'Completed';
+          svc.timeDone = new Date().toISOString().slice(0, 16);
+        }
+        saveState();
+      }
+    }
+
+    function deleteService(svcId) {
+      if (confirm("Delete this service record?")) {
+        servicesData = servicesData.filter(s => s.id !== svcId);
+        saveState();
+      }
+    }
+
+    function setServiceSort(field) {
+      if (serviceSortField === field) {
+        serviceSortAsc = !serviceSortAsc;
+      } else {
+        serviceSortField = field;
+        serviceSortAsc = true;
+      }
+      document.getElementById('svcSortBy').value = field;
+      renderServiceTable();
+    }
+
+    function openEvidenceModal(svcId) {
+      const svc = servicesData.find(s => s.id === svcId);
+      if (!svc || !svc.evidence) return;
+      document.getElementById('modalTitle').innerText = `Evidence: ${svc.unitName} - ${svc.accessory}`;
+      document.getElementById('modalImage').src = svc.evidence;
+      document.getElementById('evidenceModal').classList.remove('hidden');
+    }
+
+    function closeEvidenceModal() {
+      document.getElementById('evidenceModal').classList.add('hidden');
+    }
+
+    function renderServiceTable() {
+      const tbody = document.getElementById('serviceTableBody');
+      const search = document.getElementById('searchService').value.toLowerCase();
+      const sortSelect = document.getElementById('svcSortBy').value;
+      serviceSortField = sortSelect;
+
+      let filtered = getFilteredServices().filter(s => {
+        if (!search) return true;
+        return `${s.unitName} ${s.location} ${s.radioId} ${s.tech} ${s.accessory} ${s.type} ${s.status} ${s.remarks}`.toLowerCase().includes(search);
+      });
+
+      filtered.sort((a, b) => {
+        let valA = a[serviceSortField] || '';
+        let valB = b[serviceSortField] || '';
+
+        if (serviceSortField === 'downtime') {
+          valA = calculateDowntimeMinutes(a.timeDown, a.timeDone, a.status);
+          valB = calculateDowntimeMinutes(b.timeDown, b.timeDone, b.status);
+        }
+
+        if (valA < valB) return serviceSortAsc ? -1 : 1;
+        if (valA > valB) return serviceSortAsc ? 1 : -1;
+        return 0;
+      });
+
+      tbody.innerHTML = filtered.map(s => {
+        const downtimeText = formatDowntimeDisplay(s.timeDown, s.timeDone, s.status);
+        const timeDownFormatted = s.timeDown ? s.timeDown.replace('T', ' ') : '-';
+        const timeDoneFormatted = s.timeDone ? s.timeDone.replace('T', ' ') : (s.status === 'Completed' ? 'Done' : 'Ongoing');
+
+        const evidenceBtnHtml = s.evidence 
+          ? `<button onclick="openEvidenceModal('${s.id}')" class="p-1.5 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/60 rounded text-[11px] text-emerald-300 flex items-center gap-1 shadow-sm">
+               <i class="fa-solid fa-image text-emerald-400"></i> View
+             </button>`
+          : `<span class="text-[10px] text-slate-500 italic">No Photo</span>`;
+
+        const remarksDisplay = s.remarks 
+          ? `<div class="text-[10px] text-cyan-300/90 bg-slate-900/60 p-1.5 rounded border border-slate-800 mt-1.5 leading-tight italic"><i class="fa-solid fa-quote-left text-[8px] mr-1 text-cyan-500"></i>${s.remarks}</div>` 
+          : '';
+
+        return `
+          <tr class="hover:bg-slate-800/40">
+            <td class="p-2 font-medium text-white">
+              <div class="font-bold">${s.unitName}</div>
+              <div class="text-[10px] text-rose-300/90 flex items-center gap-1 mt-0.5">
+                <i class="fa-solid fa-location-dot text-[9px]"></i> ${s.location || 'N/A'}
+              </div>
+              <span class="text-[10px] text-blue-400 font-mono">${s.radioId}</span>
+            </td>
+            <td class="p-2 text-slate-300">
+              <span class="font-semibold text-slate-100">${s.type}</span><br>
+              <span class="text-[10px] text-amber-300 font-medium">${s.accessory} (x${s.demand})</span>
+              ${remarksDisplay}
+            </td>
+            <td class="p-2">${evidenceBtnHtml}</td>
+            <td class="p-2 text-slate-300 font-medium">${s.tech}</td>
+            <td class="p-2 text-[11px] font-mono text-slate-300">
+              <div class="text-rose-300"><i class="fa-solid fa-arrow-down text-[9px]"></i> ${timeDownFormatted}</div>
+              <div class="text-emerald-300"><i class="fa-solid fa-check text-[9px]"></i> ${timeDoneFormatted}</div>
+            </td>
+            <td class="p-2">
+              <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold ${s.status === 'Completed' ? 'bg-slate-800 text-slate-200 border border-slate-700' : 'bg-amber-950/80 text-amber-300 border border-amber-700/50'}">
+                <i class="fa-solid fa-hourglass-half mr-1 text-[10px]"></i>${downtimeText}
+              </span>
+            </td>
+            <td class="p-2">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${s.status === 'Completed' ? 'bg-emerald-900/80 text-emerald-200 border border-emerald-700/50' : 'bg-rose-900/80 text-rose-200 border border-rose-700/50 animate-pulse'}">${s.status}</span>
+            </td>
+            <td class="p-2 text-right whitespace-nowrap">
+              <button onclick="editService('${s.id}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-blue-300 text-xs rounded border border-slate-700 mr-1" title="Edit Service">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button onclick="toggleServiceStatus('${s.id}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-xs rounded border border-slate-700 mr-1" title="Toggle Status">
+                <i class="fa-solid fa-arrows-rotate text-blue-400"></i>
+              </button>
+              <button onclick="deleteService('${s.id}')" class="px-2 py-1 bg-slate-800 hover:bg-rose-900/80 text-rose-300 text-xs rounded border border-slate-700" title="Delete">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // --- UNACTIONED WORK REMINDER BANNER ---
+    function updateUnactionedWorkReminder() {
+      const pendingWork = servicesData.filter(s => s.status === 'In Progress');
+      const badge = document.getElementById('unactionedBadge');
+      const summaryText = document.getElementById('unactionedSummaryText');
+
+      badge.innerText = `${pendingWork.length} Pending Task${pendingWork.length === 1 ? '' : 's'}`;
+
+      if (pendingWork.length === 0) {
+        summaryText.innerText = 'All radio and accessory maintenance tasks are completed. No outstanding action required.';
+      } else {
+        const itemsSummary = pendingWork.slice(0, 3).map(p => `${p.unitName} @ ${p.location || 'Site'} (${p.accessory})`).join(', ');
+        const extra = pendingWork.length > 3 ? ` and ${pendingWork.length - 3} more` : '';
+        summaryText.innerHTML = `<strong>Attention Required:</strong> ${itemsSummary}${extra} require technician action.`;
+      }
+    }
+
+    // --- INVENTORY STOCK MANAGEMENT (FULL CRUD) ---
+    function handleStockSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('stockFormId').value || 'stk-' + Date.now();
+      const name = document.getElementById('stkName').value.trim();
+      const category = document.getElementById('stkCategory').value.trim();
+      const count = parseInt(document.getElementById('stkCount').value) || 0;
+      const min = parseInt(document.getElementById('stkMin').value) || 0;
+
+      const existingIndex = stockData.findIndex(s => s.id === id);
+      const stockObj = { id, name, category, count, min };
+
+      if (existingIndex >= 0) {
+        stockData[existingIndex] = stockObj;
+      } else {
+        stockData.push(stockObj);
+      }
+
+      resetStockForm();
+      saveState();
+    }
+
+    function editStock(stockId) {
+      const item = stockData.find(s => s.id === stockId);
+      if (!item) return;
+
+      document.getElementById('stockFormId').value = item.id;
+      document.getElementById('stkName').value = item.name;
+      document.getElementById('stkCategory').value = item.category || 'General';
+      document.getElementById('stkCount').value = item.count;
+      document.getElementById('stkMin').value = item.min;
+
+      document.getElementById('stockFormTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-emerald-400"></i> Edit Inventory Item';
+      document.getElementById('cancelStockBtn').classList.remove('hidden');
+    }
+
+    function deleteStock(stockId) {
+      if (confirm("Delete this inventory item from stock?")) {
+        stockData = stockData.filter(s => s.id !== stockId);
+        saveState();
+      }
+    }
+
+    function resetStockForm() {
+      document.getElementById('stockFormId').value = '';
+      document.getElementById('stockForm').reset();
+      document.getElementById('stockFormTitle').innerHTML = '<i class="fa-solid fa-box-archive text-emerald-400"></i> Add Inventory Item';
+      document.getElementById('cancelStockBtn').classList.add('hidden');
+    }
+
+    function updateStockQuick(id, change) {
+      const item = stockData.find(s => s.id === id);
+      if (item) {
+        item.count = Math.max(0, item.count + change);
+        saveState();
+      }
+    }
+
+    function renderStockTable() {
+      const tbody = document.getElementById('stockTableBody');
+      tbody.innerHTML = stockData.map(s => {
+        const isLow = s.count <= s.min;
+        return `
+          <tr class="hover:bg-slate-800/40">
+            <td class="p-2.5">
+              <div class="font-medium text-white">${s.name}</div>
+              <span class="text-[10px] text-slate-400 font-semibold">${s.category || 'General'}</span>
+            </td>
+            <td class="p-2.5 font-bold ${isLow ? 'text-rose-400' : 'text-emerald-400'} text-sm">${s.count}</td>
+            <td class="p-2.5 text-slate-400">${s.min} units</td>
+            <td class="p-2.5">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isLow ? 'bg-rose-900/80 text-rose-200 border border-rose-700/50' : 'bg-emerald-900/80 text-emerald-200 border border-emerald-700/50'}">
+                ${isLow ? 'REORDER' : 'OK'}
+              </span>
+            </td>
+            <td class="p-2.5 text-right whitespace-nowrap">
+              <button onclick="updateStockQuick('${s.id}', 1)" class="px-2 py-0.5 bg-slate-800 hover:bg-emerald-700 text-white rounded border border-slate-700 font-bold text-xs mr-1" title="Increase">+</button>
+              <button onclick="updateStockQuick('${s.id}', -1)" class="px-2 py-0.5 bg-slate-800 hover:bg-rose-700 text-white rounded border border-slate-700 font-bold text-xs mr-1" title="Decrease">-</button>
+              <button onclick="editStock('${s.id}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-blue-300 rounded text-[11px] mr-1 border border-slate-700">
+                <i class="fa-solid fa-pen"></i> Edit
+              </button>
+              <button onclick="deleteStock('${s.id}')" class="px-2 py-1 bg-slate-800 hover:bg-rose-900/80 text-rose-300 rounded text-[11px] border border-slate-700">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function checkStockAlerts() {
+      const lowItems = stockData.filter(s => s.count <= s.min);
+      const alertBanner = document.getElementById('stockAlertBanner');
+      const alertMsg = document.getElementById('alertMessage');
+
+      if (lowItems.length > 0) {
+        alertBanner.classList.remove('hidden');
+        alertMsg.innerText = lowItems.map(i => `${i.name} (${i.count}/${i.min})`).join(', ');
+      } else {
+        alertBanner.classList.add('hidden');
+      }
+    }
+
+    function exportStockCSV() {
+      let csv = 'ID,Name,Category,AvailableCount,MinThreshold\n';
+      stockData.forEach(s => {
+        csv += `"${s.id}","${s.name}","${s.category || 'General'}",${s.count},${s.min}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Accessory_Stock_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+    }
+
+    function importStockCSV(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const lines = evt.target.result.split('\n').slice(1);
+        lines.forEach(line => {
+          const cols = line.split(',').map(c => c.replace(/"/g, '').trim());
+          if (cols.length >= 3) {
+            const name = cols[1];
+            const category = cols.length >= 5 ? cols[2] : 'General';
+            const count = parseInt(cols.length >= 5 ? cols[3] : cols[2]);
+            const item = stockData.find(s => s.name.toLowerCase() === name.toLowerCase());
+            if (item && !isNaN(count)) {
+              item.count = count;
+              if (category) item.category = category;
+            }
+          }
+        });
+        saveState();
+        alert("Stock CSV imported successfully!");
+      };
+      reader.readAsText(file);
+    }
+
+    // --- CONSOLE JSON EDITOR ---
+    function populateConsoleJSON() {
+      const stateObj = {
+        units: unitsData,
+        services: servicesData,
+        stock: stockData,
+        settings: themeSettings
+      };
+      document.getElementById('jsonEditorArea').value = JSON.stringify(stateObj, null, 2);
+    }
+
+    function saveConsoleJSON() {
+      try {
+        const raw = document.getElementById('jsonEditorArea').value;
+        const parsed = JSON.parse(raw);
+        if (parsed.units && parsed.services && parsed.stock) {
+          unitsData = parsed.units;
+          servicesData = parsed.services;
+          stockData = parsed.stock;
+          if (parsed.settings) themeSettings = parsed.settings;
+          saveState();
+          applyCustomizationSettings();
+          alert("State successfully updated from JSON Console!");
+        } else {
+          alert("Invalid structure. Must include 'units', 'services', and 'stock' keys.");
+        }
+      } catch (err) {
+        alert("JSON Syntax Error: " + err.message);
+      }
+    }
+
+    // --- MEDIA & FILE READERS FOR CUSTOMIZATION ---
+    function readFileAsBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleMediaUpload(event, key) {
+      const file = event.target.files[0];
+      if (!file) return;
+      try {
+        const base64Str = await readFileAsBase64(file);
+        themeSettings[key] = base64Str;
+        applyCustomizationSettings();
+      } catch (err) {
+        alert("Error reading file: " + err.message);
+      }
+    }
+
+    function clearCustomMedia(key) {
+      themeSettings[key] = '';
+      applyCustomizationSettings();
+    }
+
+    // --- PAGE & THEME CUSTOMIZATION APPLY ---
+    function setThemePreset(bgColor, cardColor) {
+      document.getElementById('cfgBgColor').value = bgColor;
+      document.getElementById('cfgCardColor').value = cardColor;
+    }
+
+    function applyCustomizationSettings() {
+      themeSettings.bgColor = document.getElementById('cfgBgColor').value;
+      themeSettings.cardColor = document.getElementById('cfgCardColor').value;
+      themeSettings.iconDashboard = document.getElementById('cfgIconDashboard').value;
+      themeSettings.iconUnits = document.getElementById('cfgIconUnits').value;
+      themeSettings.iconServices = document.getElementById('cfgIconServices').value;
+      themeSettings.iconStock = document.getElementById('cfgIconStock').value;
+
+      // Apply Background Color / Wallpaper Image
+      if (themeSettings.customBgUrl) {
+        document.body.style.backgroundImage = `url('${themeSettings.customBgUrl}')`;
+      } else {
+        document.body.style.backgroundImage = 'none';
+        document.body.style.backgroundColor = themeSettings.bgColor;
+      }
+
+      // Apply Card Background Color
+      document.querySelectorAll('.card').forEach(c => {
+        c.style.backgroundColor = themeSettings.cardColor;
+      });
+
+      // Apply Custom Header Logo
+      const brandIcon = document.getElementById('headerBrandIcon');
+      const brandImg = document.getElementById('headerBrandImage');
+      if (themeSettings.customLogoUrl) {
+        brandIcon.classList.add('hidden');
+        brandImg.src = themeSettings.customLogoUrl;
+        brandImg.classList.remove('hidden');
+      } else {
+        brandImg.classList.add('hidden');
+        brandIcon.classList.remove('hidden');
+      }
+
+      // Apply Custom Favicon / Tab Icon
+      if (themeSettings.customFaviconUrl) {
+        let link = document.getElementById('dynamicFavicon');
+        if (!link) {
+          link = document.createElement('link');
+          link.id = 'dynamicFavicon';
+          link.rel = 'icon';
+          document.head.appendChild(link);
+        }
+        link.href = themeSettings.customFaviconUrl;
+      }
+
+      // Navigation Icons
+      document.getElementById('nav-icon-dashboard').className = `fa-solid ${themeSettings.iconDashboard}`;
+      document.getElementById('nav-icon-units').className = `fa-solid ${themeSettings.iconUnits}`;
+      document.getElementById('nav-icon-services').className = `fa-solid ${themeSettings.iconServices}`;
+      document.getElementById('nav-icon-stock').className = `fa-solid ${themeSettings.iconStock}`;
+
+      saveState();
+    }
+
+    function loadCustomizationInputs() {
+      document.getElementById('cfgBgColor').value = themeSettings.bgColor || '#0f172a';
+      document.getElementById('cfgCardColor').value = themeSettings.cardColor || 'rgba(30, 41, 59, 0.85)';
+      document.getElementById('cfgIconDashboard').value = themeSettings.iconDashboard || 'fa-chart-line';
+      document.getElementById('cfgIconUnits').value = themeSettings.iconUnits || 'fa-truck-field';
+      document.getElementById('cfgIconServices').value = themeSettings.iconServices || 'fa-wrench';
+      document.getElementById('cfgIconStock').value = themeSettings.iconStock || 'fa-boxes-stacked';
+
+      applyCustomizationSettings();
+    }
+
+    // --- EXPORTS: EXCEL & PDF ---
+    function exportToExcel() {
+      const wb = XLSX.utils.book_new();
+
+      const unitsWS = XLSX.utils.json_to_sheet(unitsData.map(u => ({
+        'Unit Name': u.name,
+        'Category': u.category,
+        'Radio SN': u.radioSN,
+        'Radio Remark': u.radioRemark,
+        'PTT Remark': u.pttRemark,
+        'Antenna Remark': u.antennaRemark,
+        'Bracket Antenna Remark': u.bracketRemark
+      })));
+      XLSX.utils.book_append_sheet(wb, unitsWS, 'Fleet Units');
+
+      const servicesWS = XLSX.utils.json_to_sheet(servicesData.map(s => ({
+        'Date': s.date,
+        'Unit': s.unitName,
+        'Location / Site': s.location || 'N/A',
+        'Radio ID': s.radioId,
+        'Condition': s.condition,
+        'Accessory': s.accessory,
+        'Action Type': s.type,
+        'Technician': s.tech,
+        'Activity Remarks': s.remarks || '-',
+        'Has Photo Evidence': s.evidence ? 'Yes' : 'No',
+        'Time Down': s.timeDown || '-',
+        'Time Done': s.timeDone || '-',
+        'Total Downtime': formatDowntimeDisplay(s.timeDown, s.timeDone, s.status),
+        'Qty': s.demand,
+        'Status': s.status
+      })));
+      XLSX.utils.book_append_sheet(wb, servicesWS, 'Service Logs');
+
+      const stockWS = XLSX.utils.json_to_sheet(stockData.map(st => ({
+        'Accessory Name': st.name,
+        'Category': st.category || 'General',
+        'Available Stock': st.count,
+        'Minimum Threshold': st.min,
+        'Status': st.count <= st.min ? 'REORDER' : 'OK'
+      })));
+      XLSX.utils.book_append_sheet(wb, stockWS, 'Inventory');
+
+      XLSX.writeFile(wb, `XiR_M3886_Fleet_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+
+    function generatePDFReport() {
+      const element = document.getElementById('reportContainer');
+      const opt = {
+        margin:       [0.3, 0.3, 0.3, 0.3],
+        filename:     `XiR_M3886_Fleet_Summary_${new Date().toISOString().split('T')[0]}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, backgroundColor: themeSettings.bgColor || '#0f172a' },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    // --- CHART GRAPH RENDERERS WITH FIXES ---
+    function renderCharts() {
+      const filteredServices = getFilteredServices();
+
+      // 1. Weekly Trend Breakdown
+      const weekCounts = {};
+      filteredServices.forEach(s => {
+        const d = s.date ? new Date(s.date) : new Date();
+        const year = d.getFullYear();
+        const firstJan = new Date(year, 0, 1);
+        const dayOfYear = ((d - firstJan) / 86400000);
+        const weekNum = Math.ceil((dayOfYear + firstJan.getDay() + 1) / 7);
+        const weekLabel = `Wk ${weekNum} (${year})`;
+        weekCounts[weekLabel] = (weekCounts[weekLabel] || 0) + 1;
+      });
+
+      const weeklyLabels = Object.keys(weekCounts).slice(-8);
+      const weeklyData = weeklyLabels.map(l => weekCounts[l] || 0);
+
+      if (chartWeeklyTrend) chartWeeklyTrend.destroy();
+      chartWeeklyTrend = new Chart(document.getElementById('chartWeeklyTrend'), {
+        type: 'line',
+        data: {
+          labels: weeklyLabels.length > 0 ? weeklyLabels : ['Wk 31', 'Wk 32', 'Wk 33', 'Wk 34'],
+          datasets: [{
+            label: 'Service & Maintenance Events',
+            data: weeklyData.length > 0 ? weeklyData : [2, 4, 1, 3],
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.15)',
+            fill: true,
+            tension: 0.35,
+            pointRadius: 5,
+            pointBackgroundColor: '#60a5fa'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#94a3b8' } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+            y: { ticks: { color: '#94a3b8', stepSize: 1 }, grid: { color: 'rgba(255, 255, 255, 0.05)' } }
+          }
+        }
+      });
+
+      // 2. Category Distribution Chart
+      const catCounts = { DTVV: 0, PMVV: 0, Support: 0, A2B: 0 };
+      unitsData.forEach(u => {
+        if (catCounts[u.category] !== undefined) catCounts[u.category]++;
+      });
+
+      if (chartCategoryDist) chartCategoryDist.destroy();
+      chartCategoryDist = new Chart(document.getElementById('chartCategoryDist'), {
+        type: 'doughnut',
+        data: {
+          labels: ['DTVV', 'PMVV', 'Support', 'A2B'],
+          datasets: [{
+            data: [catCounts.DTVV, catCounts.PMVV, catCounts.Support, catCounts.A2B],
+            backgroundColor: ['#3b82f6', '#a855f7', '#f59e0b', '#10b981'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } }
+        }
+      });
+
+      // 3. FIXED Supply vs Demand Chart
+      const demandByAccessory = {};
+      filteredServices.forEach(s => {
+        if (!s.accessory) return;
+        const key = s.accessory.trim();
+        demandByAccessory[key] = (demandByAccessory[key] || 0) + (parseInt(s.demand) || 1);
+      });
+
+      // Create a map for stock count lookup (case-insensitive)
+      const stockMap = {};
+      stockData.forEach(st => {
+        if (st.name) stockMap[st.name.trim().toLowerCase()] = st.count;
+      });
+
+      // Combine all unique accessory names from inventory AND logged services
+      const allAccKeys = new Set([
+        ...stockData.map(st => st.name.trim()),
+        ...Object.keys(demandByAccessory)
+      ]);
+
+      const accNames = Array.from(allAccKeys);
+      const supplyData = accNames.map(name => stockMap[name.toLowerCase()] || 0);
+      const demandData = accNames.map(name => demandByAccessory[name] || 0);
+
+      if (chartDemandSupply) chartDemandSupply.destroy();
+      chartDemandSupply = new Chart(document.getElementById('chartDemandSupply'), {
+        type: 'bar',
+        data: {
+          labels: accNames.length > 0 ? accNames : ['No Data'],
+          datasets: [
+            { label: 'Stock Available', data: supplyData, backgroundColor: '#10b981' },
+            { label: 'Logged Demand', data: demandData, backgroundColor: '#f43f5e' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#94a3b8' } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+            y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255, 255, 255, 0.05)' } }
+          }
+        }
+      });
+
+      // 4. Tech Workload Chart
+      const techCounts = {};
+      filteredServices.forEach(s => {
+        if (s.tech) techCounts[s.tech] = (techCounts[s.tech] || 0) + 1;
+      });
+
+      if (chartTechWorkload) chartTechWorkload.destroy();
+      chartTechWorkload = new Chart(document.getElementById('chartTechWorkload'), {
+        type: 'bar',
+        data: {
+          labels: Object.keys(techCounts).length > 0 ? Object.keys(techCounts) : ['Alex Rivera', 'David Miller'],
+          datasets: [{
+            label: 'Completed Tasks',
+            data: Object.keys(techCounts).length > 0 ? Object.values(techCounts) : [2, 1],
+            backgroundColor: '#f59e0b'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#94a3b8' } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+            y: { ticks: { color: '#94a3b8', stepSize: 1 }, grid: { color: 'rgba(255, 255, 255, 0.05)' } }
+          }
+        }
+      });
+
+      // 5. Service Action Breakdown
+      const actionCounts = { 'Replacement': 0, 'Repair': 0, 'Routine Inspection': 0 };
+      filteredServices.forEach(s => {
+        if (actionCounts[s.type] !== undefined) actionCounts[s.type]++;
+      });
+
+      if (chartActionBreakdown) chartActionBreakdown.destroy();
+      chartActionBreakdown = new Chart(document.getElementById('chartActionBreakdown'), {
+        type: 'pie',
+        data: {
+          labels: ['Replacement', 'Repair', 'Routine Inspection'],
+          datasets: [{
+            data: [actionCounts.Replacement, actionCounts['Repair'], actionCounts['Routine Inspection']],
+            backgroundColor: ['#f43f5e', '#a855f7', '#3b82f6'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } }
+        }
+      });
+    }
+
+    // --- MAIN UPDATE CONTROLLER ---
+    function updateApp() {
+      // Metrics
+      document.getElementById('metric-units').innerText = unitsData.length;
+      document.getElementById('metric-pending').innerText = servicesData.filter(s => s.status === 'In Progress').length;
+      document.getElementById('metric-lowstock').innerText = stockData.filter(s => s.count <= s.min).length;
+
+      // Render Tables & Datalists
+      updateAccessoryDatalist();
+      populateUnitSelectDropdowns();
+      renderUnitsTable();
+      renderServiceTable();
+      renderStockTable();
+      checkStockAlerts();
+      updateUnactionedWorkReminder();
+
+      // Render Analytics Charts
+      renderCharts();
+    }
+
+    // Initialize on load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadCustomizationInputs();
+      updateApp();
+    });
+  </script>
+      <!-- The Footer Section Starts Here -->
+    <footer>
+        <p>&copy; 2026 IT Departement PT. Karunia Armada Indonesia.
+        Site PT. GANDA ALAM MAKMUR - Sangkulirang</p>
+    </footer>
+
+</body>
+</html>
